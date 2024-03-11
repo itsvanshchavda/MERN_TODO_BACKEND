@@ -37,23 +37,20 @@ export const addtask = async (req, res) => {
 export const updateTask = async (req, res) => {
   try {
     const { title, description, completed } = req.body;
+    const { id } = req.params;
 
-    const tasks = await Task.findById(req.params.id);
-    if (!tasks) {
+    const task = await Task.findByIdAndUpdate(id, { title, description, completed, user: req.user }, { new: true });
+
+    if (!task) {
       return res.status(404).json({ success: false, message: "No task found" });
     }
-
-    tasks.title = title;
-    tasks.description = description;
-    tasks.completed = completed;
-
-    await tasks.save();
 
     res.status(200).json({ success: "Task Updated !!" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
+
 
 export const deleteTask = async (req, res) => {
   try {
