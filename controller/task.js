@@ -35,11 +35,10 @@ export const addtask = async (req, res) => {
 };
 
 export const updateTask = async (req, res) => {
-
-  const { title, description, completed } = req.body;
-
   try {
-    const tasks = await Task.findByIdAndUpdate(req.params.id);
+    const { title, description, completed } = req.body;
+
+    const tasks = await Task.findById(req.params.id);
     if (!tasks) {
       return res.status(404).json({ success: false, message: "No task found" });
     }
