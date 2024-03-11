@@ -39,12 +39,14 @@ export const updateTask = async (req, res) => {
   const { title, description, completed } = req.body;
 
   try {
-    const tasks = await Task.findByIdAndUpdate(id);
+    const tasks = await Task.findByIdAndUpdate(
+      id,
+      { title, description, completed },
+      { new: true }
+    );
 
     if (!tasks) {
-      return res
-        .status(404)
-        .json({ success: false, message: "No task found" });
+      return res.status(404).json({ success: false, message: "No task found" });
     }
 
     if (title) tasks.title = title;
