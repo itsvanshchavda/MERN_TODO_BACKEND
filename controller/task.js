@@ -49,9 +49,9 @@ export const updateTask = async (req, res) => {
       return res.status(404).json({ success: false, message: "No task found" });
     }
 
-    if (title) tasks.title = title;
-    if (description) tasks.description = description;
-    if (completed) tasks.completed = completed;
+    tasks.title = title;
+    tasks.description = description;
+    tasks.completed = !tasks.completed;
 
     await tasks.save();
 
