@@ -30,6 +30,7 @@ router.get(
   "/auth/google/callback",
   passport.authenticate("google", { failureRedirect: "/login" }),
   (req, res) => {
+    console.log("Google OAuth successful. User:", req.user);
     const { displayName, photos } = req.user;
     const userName = displayName;
     const userProfilePicture =
