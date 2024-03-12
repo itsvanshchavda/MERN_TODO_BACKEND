@@ -1,6 +1,7 @@
 import { User } from "../model/user.js";
 import bcrypt from "bcrypt";
 import { setCookie } from "../utils/jwt.js";
+import { getGoogleProfile } from "../utils/googleAuth.js";
 
 export const registerUser = async (req, res) => {
   try {
@@ -48,6 +49,35 @@ export const loginUser = async (req, res) => {
       return res.status(401).json({
         success: false,
         message: "Invalid credentials!",
+      });
+    }
+
+    setCookie(req, res, user, `Welcome Back! ${user.name}`, 200);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const googleLogin = async (req, res) => {
+  try {
+    const { id, token } = req.body;
+
+    const profile = await getGoogleProfile(token);
+    console.log(profile);
+
+    const email = profile.email;
+    const name = profile.name;
+    const picture = profile.picture;
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      user = await User.create({
+        name,
+        email,
+        picture,
+        password: "",
+        googleId: id,
       });
     }
 
