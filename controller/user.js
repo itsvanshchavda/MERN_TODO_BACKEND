@@ -1,7 +1,7 @@
 import { User } from "../model/user.js";
 import bcrypt from "bcrypt";
 import { setCookie } from "../utils/jwt.js";
-import { getGoogleProfile } from "../utils/googleAuth.js";
+
 
 export const registerUser = async (req, res) => {
   try {

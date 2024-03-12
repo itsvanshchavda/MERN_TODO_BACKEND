@@ -1,6 +1,7 @@
 import { Router } from "express";
 import passport from "passport";
 import session from "express-session";
+import GoogleStrategy from "passport-google-oauth2";
 
 import {
   getMyProfile,
@@ -9,6 +10,7 @@ import {
   registerUser,
 } from "../controller/user.js";
 import { isAuthenticated } from "../middleware/auth.js";
+import { User } from "../model/user.js";
 
 const router = Router();
 
@@ -55,20 +57,16 @@ passport.deserializeUser(function (obj, done) {
 passport.use(
   new GoogleStrategy(
     {
-      clientID: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      clientID: String(process.env.GOOGLE_CLIENT_ID),
+      clientSecret: String(process.env.GOOGLE_CLIENT_SECRET),
       callbackURL:
         "https://mern-todo-backend-version-2.onrender.com/auth/google/callback",
       passReqToCallback: true,
     },
     function (request, accessToken, refreshToken, profile, done) {
-      // Handle errors properly or replace 'err' with null
-      // For example:
-      if (!profile) {
-        return done(null, false);
-      }
-      // If authentication succeeds, pass the user profile to the next middleware
-      return done(null, profile);
+      User.create({ googleId: profile.id }, function (err, user) {
+        return done(err, user);
+      });
     }
   )
 );
