@@ -65,6 +65,7 @@ passport.use(
       passReqToCallback: true,
     },
     function (request, accessToken, refreshToken, profile, done) {
+      console.log("GoogleStrategy callback:", profile);
       User.create({ googleId: profile.id }, function (err, user) {
         return done(err, user);
       });
