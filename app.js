@@ -5,8 +5,7 @@ import userRouter from "./routes/userRoutes.js";
 import taskRouter from "./routes/taskRoutes.js";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import passport from "passport";
-import session from "express-session";
+
 
 dotenv.config({
   path: "./data/config.env",
@@ -31,10 +30,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-//goggle auth
-app.use(session({ secret: "cats", resave: false, saveUninitialized: true }));
-app.use(passport.initialize());
-app.use(passport.session());
 
 // Routes
 app.use("/api/v2/users", userRouter);
