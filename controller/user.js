@@ -58,34 +58,34 @@ export const loginUser = async (req, res) => {
   }
 };
 
-export const googleLogin = async (req, res) => {
-  try {
-    const { id, token } = req.body;
+// export const googleLogin = async (req, res) => {
+//   try {
+//     const { id, token } = req.body;
 
-    const profile = await getGoogleProfile(token);
-    console.log(profile);
+//     const profile = await getGoogleProfile(token);
+//     console.log(profile);
 
-    const email = profile.email;
-    const name = profile.name;
-    const picture = profile.picture;
+//     const email = profile.email;
+//     const name = profile.name;
+//     const picture = profile.picture;
 
-    let user = await User.findOne({ email });
+//     let user = await User.findOne({ email });
 
-    if (!user) {
-      user = await User.create({
-        name,
-        email,
-        picture,
-        password: "",
-        googleId: id,
-      });
-    }
+//     if (!user) {
+//       user = await User.create({
+//         name,
+//         email,
+//         picture,
+//         password: "",
+//         googleId: id,
+//       });
+//     }
 
-    setCookie(req, res, user, `Welcome Back! ${user.name}`, 200);
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
+//     setCookie(req, res, user, `Welcome Back! ${user.name}`, 200);
+//   } catch (err) {
+//     res.status(500).json({ success: false, message: err.message });
+//   }
+// };
 
 export const getMyProfile = async (req, res) => {
   try {
