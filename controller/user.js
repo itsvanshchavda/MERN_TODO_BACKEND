@@ -3,7 +3,6 @@ import bcrypt from "bcrypt";
 import { setCookie } from "../utils/jwt.js";
 import { sendEmail } from "../utils/email.js";
 
-
 export const registerUser = async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -126,12 +125,19 @@ export const forgotPassword = async (req, res) => {
     await user.save();
 
     // Send email
-    const message = `Here is your OTP: ${otp}`;
-
+    const message = "Rest password request received";
+    const htmlMessage = `<div style="font-family: Arial, sans-serif; background-color: #f5f5f5; padding: 20px;">
+    <h1 style="color: #333333;">One-Time Password (OTP) Email</h1>
+    <p style="font-size: 16px;">Hello,</p>
+    <p style="font-size: 16px;">Your One-Time Password (OTP) : <strong>${otp}</strong></p>
+    <p style="font-size: 16px;">Please use this OTP to proceed with your action.</p>
+    <p style="font-size: 16px;">Thank you.</p>
+</div>`;
     await sendEmail({
       email: user.email,
       subject: "Password Change Reset",
       message,
+      html: htmlMessage,
     });
 
     return res.status(200).json({
@@ -149,7 +155,7 @@ export const forgotPassword = async (req, res) => {
   }
 };
 
-// resetPassword 
+// resetPassword
 export const resetPassword = async (req, res) => {
   try {
     const { otp } = req.body;
@@ -170,7 +176,6 @@ export const resetPassword = async (req, res) => {
       });
     }
 
-  
     const newPassword = req.body.password;
     user.password = await bcrypt.hash(newPassword, 10);
     user.otp = undefined;
