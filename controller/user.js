@@ -1,7 +1,9 @@
 import { User } from "../model/user.js";
 import bcrypt from "bcrypt";
 import { setCookie } from "../utils/jwt.js";
-
+import { createResetToken } from "../utils/resetTokem.js";
+import { sendEmail } from "../utils/email.js";
+import crypto from "crypto";
 
 export const registerUser = async (req, res) => {
   try {
@@ -26,7 +28,7 @@ export const registerUser = async (req, res) => {
 
     setCookie(req, res, user, "Registered Successfully!");
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
 
@@ -54,38 +56,9 @@ export const loginUser = async (req, res) => {
 
     setCookie(req, res, user, `Welcome Back! ${user.name}`, 200);
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
-
-// export const googleLogin = async (req, res) => {
-//   try {
-//     const { id, token } = req.body;
-
-//     const profile = await getGoogleProfile(token);
-//     console.log(profile);
-
-//     const email = profile.email;
-//     const name = profile.name;
-//     const picture = profile.picture;
-
-//     let user = await User.findOne({ email });
-
-//     if (!user) {
-//       user = await User.create({
-//         name,
-//         email,
-//         picture,
-//         password: "",
-//         googleId: id,
-//       });
-//     }
-
-//     setCookie(req, res, user, `Welcome Back! ${user.name}`, 200);
-//   } catch (err) {
-//     res.status(500).json({ success: false, message: err.message });
-//   }
-// };
 
 export const getMyProfile = async (req, res) => {
   try {
@@ -115,7 +88,7 @@ export const getMyProfile = async (req, res) => {
     });
   } catch (err) {
     console.error("Error fetching user profile:", err.message);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Internal Server Error",
     });
@@ -133,4 +106,100 @@ export const logoutUser = (req, res) => {
       success: true,
       message: "Logout Successfully",
     });
+};
+
+//forgot password
+
+export const forgotPassword = async (req, res) => {
+  const user = await User.findOne({ email: req.body.email });
+
+  try {
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const { passwordResetToken, passwordResetExpire, resetToken } =
+      await createResetToken();
+
+    user.passwordResetToken = passwordResetToken;
+    user.passwordResetExpire = passwordResetExpire;
+    await user.save({ validateBeforeSave: false });
+
+    // Send email
+    const resetURL = `${req.protocol}://${req.get(
+      "host"
+    )}/api/v2/users/resetpassword/${resetToken}`;
+    const message = `You are receiving this email because you (or someone else) has requested the reset of a password. \n\n ${resetURL} this is reset link valid for 10 minutes`;
+
+    await sendEmail({
+      email: user.email,
+      subject: "Password Change Reset",
+      message,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Password reset link sent to your email",
+      resetToken,
+    });
+  } catch (err) {
+    console.error("Error sending reset link:", err.message);
+
+    if (user) {
+      user.passwordResetToken = undefined;
+      user.passwordResetExpire = undefined;
+      await user.save({ validateBeforeSave: false });
+    }
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+    const token = crypto
+      .createHash("sha256")
+      .update(req.params.token)
+      .digest("hex");
+    const user = await User.findOne({
+      email: req.body.email,
+      passwordResetToken: token,
+      passwordResetExpire: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Token is expired or invalid",
+      });
+    }
+
+    const hashPass = await bcrypt.hash(req.body.password, 10);
+
+    user.password = hashPass;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpire = undefined;
+    user.updatedAt = Date.now();
+
+    await user.save();
+
+    // Set cookies and send response
+    let loginToken = setCookie(req, res, user, "Password reset successfully");
+    return res.status(200).json({
+      success: true,
+      message: "Password reset successfully",
+      loginToken,
+    });
+  } catch (err) {
+    console.error("Error resetting password:", err.message);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
 };
