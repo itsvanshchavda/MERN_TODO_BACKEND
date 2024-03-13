@@ -1,9 +1,8 @@
 import { User } from "../model/user.js";
 import bcrypt from "bcrypt";
 import { setCookie } from "../utils/jwt.js";
-import { createResetToken } from "../utils/resetTokem.js";
 import { sendEmail } from "../utils/email.js";
-import crypto from "crypto";
+
 
 export const registerUser = async (req, res) => {
   try {
@@ -109,11 +108,10 @@ export const logoutUser = (req, res) => {
 };
 
 //forgot password
-
 export const forgotPassword = async (req, res) => {
-  const user = await User.findOne({ email: req.body.email });
-
   try {
+    const user = await User.findOne({ email: req.body.email });
+
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -121,18 +119,14 @@ export const forgotPassword = async (req, res) => {
       });
     }
 
-    const { passwordResetToken, passwordResetExpire, resetToken } =
-      await createResetToken();
+    const otp = Math.floor(100000 + Math.random() * 900000);
 
-    user.passwordResetToken = passwordResetToken;
-    user.passwordResetExpire = passwordResetExpire;
-    await user.save({ validateBeforeSave: false });
+    user.otp = otp;
+
+    await user.save();
 
     // Send email
-    const resetURL = `${req.protocol}://${req.get(
-      "host"
-    )}/api/v2/users/resetpassword/${resetToken}`;
-    const message = `You are receiving this email because you (or someone else) has requested the reset of a password. \n\n ${resetURL} this is reset link valid for 10 minutes`;
+    const message = `Here is your OTP: ${otp}`;
 
     await sendEmail({
       email: user.email,
@@ -142,17 +136,12 @@ export const forgotPassword = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Password reset link sent to your email",
-      resetToken,
+      message: "OTP sent to your email!",
+      otp,
     });
   } catch (err) {
-    console.error("Error sending reset link:", err.message);
+    console.error("Error sending OTP:", err.message);
 
-    if (user) {
-      user.passwordResetToken = undefined;
-      user.passwordResetExpire = undefined;
-      await user.save({ validateBeforeSave: false });
-    }
     return res.status(500).json({
       success: false,
       message: "Internal Server Error",
@@ -160,43 +149,41 @@ export const forgotPassword = async (req, res) => {
   }
 };
 
+// resetPassword 
 export const resetPassword = async (req, res) => {
   try {
-    const token = crypto
-      .createHash("sha256")
-      .update(req.params.token)
-      .digest("hex");
-    const user = await User.findOne({
-      email: req.body.email,
-      passwordResetToken: token,
-      passwordResetExpire: { $gt: Date.now() },
-    });
+    const { otp } = req.body;
+
+    if (!otp) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP not found",
+      });
+    }
+
+    const user = await User.findOne({ otp });
 
     if (!user) {
       return res.status(400).json({
         success: false,
-        message: "Token is expired or invalid",
+        message: "Invalid OTP",
       });
     }
 
-    const hashPass = await bcrypt.hash(req.body.password, 10);
-
-    user.password = hashPass;
-    user.passwordResetToken = undefined;
-    user.passwordResetExpire = undefined;
-    user.updatedAt = Date.now();
+  
+    const newPassword = req.body.password;
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.otp = undefined;
 
     await user.save();
 
-    // Set cookies and send response
-    let loginToken = setCookie(req, res, user, "Password reset successfully");
     return res.status(200).json({
       success: true,
       message: "Password reset successfully",
-      loginToken,
     });
   } catch (err) {
     console.error("Error resetting password:", err.message);
+
     return res.status(500).json({
       success: false,
       message: "Internal Server Error",
